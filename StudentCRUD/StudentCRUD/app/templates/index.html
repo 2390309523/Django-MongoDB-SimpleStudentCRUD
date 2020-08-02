@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <title>Student表-CRUD</title>
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'bootstrap-3.3.7-dist/css/bootstrap.min.css' %}">
+</head>
+<body>
+{% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div>
+                <div class="input-group" style="width: 80%;margin: 0 auto">
+                    <input type="text" name="keyword" class="form-control" placeholder="">
+                    <span class="input-group-addon" id="sub">search</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <table class="table">
+                <caption>学生表</caption>
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>年龄</th>
+                        <th>家庭住址</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <script>
+                    var studentNames = [];
+                </script>
+                    {% for student in students %}
+                    <tr class="item">
+                        <td class="id">{{ student.id }}</td>
+                        <td><input name="name" class="form-control" value="{{ student.name }}" placeholder="输入姓名" type="text" disabled></td>
+                        <td>
+                            <select disabled name="gender" class="form-control">
+                                {% ifequal student.gender '男' %}
+                                <option value="男" selected="selected">男</option>
+                                <option value="女">女</option>
+                                {% else %}
+                                <option value="男">男</option>
+                                <option value="女" selected="selected">女</option>
+                                {% endifequal %}
+                        </select>
+                        </td>
+                        <td><input name="age" class="form-control" value="{{ student.age }}" type="number" max="130" min="0" disabled></td>
+                        <td><textarea name="address" class="form-control" value="{{ student.address }}" placeholder="{{ student.address }}" rows="1" readonly></textarea></td>
+                        <td>
+                            <a onclick="deleteStudent($(this),'{{ student.id }}','{{ student.name }}')">删除</a>
+                            <a class="updateStudent">修改</a>
+                        </td>
+                    </tr>
+                <script>studentNames.push("{{ student.name }}")</script>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td><a id="addOnePerson">增加一条学生记录</a></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</body>
+{% include 'frame/sourse.txt' %}
+<script type="application/javascript" src="{% static 'bootstrap-3.3.7-dist/js/bootstrap.min.js' %}"></script>
+<script>
+    var updateStudentBtn = $(".updateStudent");
+    function deleteStudent(node,id,name) {
+        if(confirm("您确定删除学生"+name+"吗？")){
+            $.ajax({
+                url:"{% url 'deleteStudent' %}",
+                data:{
+                    "id":id,
+                    "csrfmiddlewaretoken": $("[name='csrfmiddlewaretoken']").val(),
+                },
+                type:"POST",
+                dataType:"text",
+                success:function (data) {
+                    if(data.trim() == "ok"){
+                        node.parent().parent().remove()
+                    }
+                }
+            })
+        }
+    }
+    function makeInputOpen(node){
+        node.parent().parent().find("input").removeAttr("disabled")
+        node.parent().parent().find("select").removeAttr("disabled")
+        node.parent().parent().find("textarea").removeAttr("readonly")
+    }
+    function makeInputClose(node){
+        node.parent().parent().find("input").attr("disabled","disable")
+        node.parent().parent().find("select").attr("disabled","disable")
+        node.parent().parent().find("textarea").attr("readonly","readonly")
+    }
+    $(".updateStudent").click(function () {
+        let myFather = $(this).parent().parent();
+        let id = parseInt(myFather.find(".id").html())
+        let name = myFather.find("input[name=name]").val()
+        let gender = myFather.find("select[name=gender]").val()
+        let age = myFather.find("input[name=age]").val()
+        let address = myFather.find("textarea[name=address]").val()
+        if($(this).html()=="修改"){
+            makeInputClose(updateStudentBtn);
+             makeInputOpen($(this))
+            $(this).html("确定修改")
+        }
+        else{
+            $(this).html("修改")
+            $.ajax({
+                type:"POST",
+                data:{
+                    "csrfmiddlewaretoken": $("[name='csrfmiddlewaretoken']").val(),
+                    "id":id,
+                    "name":name,
+                    "gender":gender,
+                    "age":age,
+                    "address":address,
+                },
+                url:"{% url 'updateStudent' %}",
+                dataType:"text",
+                success:function (data) {
+
+                }
+            });
+            makeInputClose($(this))
+        }
+    })
+    $("#addOnePerson").click(function () {
+        let node = $("<tr>\n" +
+            "                    <td></td>\n" +
+            "                    <td><input name=\"name\" class=\"form-control\" placeholder=\"姓名\" type=\"text\"></td>\n" +
+            "                    <td>\n" +
+            "                        <select name=\"gender\" class=\"form-control\">\n" +
+            "                            <option value=\"男\">男</option>\n" +
+            "                            <option value=\"女\">女</option>\n" +
+            "                        </select>\n" +
+            "                    </td>\n" +
+            "                    <td><input name=\"age\" class=\"form-control\" type=\"number\" value=\"0\" max=\"130\" min=\"0\"></td>\n" +
+            "                    <td><textarea name=\"address\" class=\"form-control\" rows=\"1\" placeholder=\"家庭住址\"></textarea></td>\n" +
+            "                    <td><a id=\"insert\">插入</a></td>\n" +
+            "                </tr>")
+        $("table>tbody").append(node)
+        $("#insert").click(function () {
+            let father = $(this).parent().parent();
+            let name = father.find("input[name=name]").val();
+            let age = father.find("input[name=age]").val();
+            let gender = father.find("select[name=gender]").val()
+            let address = father.find("textarea[name=address]").val()
+            if(name&&age&&gender&&address){
+                $.ajax({
+                    data:{
+                        "csrfmiddlewaretoken": $("[name='csrfmiddlewaretoken']").val(),
+                        "name":name,
+                        "gender":gender,
+                        "age":age,
+                        "address":address,
+                    },
+                    type:"POST",
+                    dataType:"text",
+                    url:"{% url 'createStudent' %}",
+                    success:function (data) {
+                        if(data.trim() == "ok"){
+                            window.location.href = "{% url 'index' %}"
+                        }
+                    }
+                })
+            }else{
+                alert("关键项好像为空喔！")
+            }
+        })
+    })
+    var keywordTimer = null;
+    var keywordFlag = 0;
+    function initKeywordTimer(){
+            keywordTimer = setInterval(function () {
+                $keyword.attr("placeholder",studentNames[keywordFlag++])
+                if(keywordFlag>studentNames.length){
+                    keywordFlag = 0;
+                }
+            },1000)
+    }
+    $(function () {
+        initKeywordTimer()
+    })
+    var $keyword = $("input[name=keyword]")
+    $("#sub").click(function () {
+
+        if($keyword.val().trim()){
+            window.location.href = "{% url 'search' %}"+$keyword.val()+"/";
+        }else if(!$keyword.val()&&$keyword.attr("placeholder")){
+            window.location.href = "{% url 'search' %}"+$keyword.attr("placeholder")+"/"
+        }else{
+            window.location.href = "{% url 'index' %}"
+        }
+    })
+</script>
+</html>
